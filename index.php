@@ -13,6 +13,7 @@ ini_set("error_reporting", "E_ALL ^E_NOTICE");
 // exit;
 
 
+
 ##### CONFIG ###########################
 ########################################
 	set_time_limit(300);
@@ -20,6 +21,8 @@ ini_set("error_reporting", "E_ALL ^E_NOTICE");
 	define('LASTFM_KEY', '03368a415f180be6c8cbf507a694a5c9');								//
 	define('GRACENOTE_CLIENT_ID', '12913664-3EAEA72CC91CA7F0C8E26D056A234C16');				//
 	define('GRACENOTE_USER_ID', '259327967408811593-57E2EF519E7F64662EC811A806A36061');		//
+	define('GRACENOTE_HOST', 'https://208.72.242.176/webapi/xml/1.0/');						//
+	define('CURL_PROXY', '');																// ['', '127.0.0.1:8080'], '' - don't use proxy
 
 	define('DOWNLOAD_FOLDER', 'D:'.DIR_DELIM.'pandora-maintest-2');
 	define('SHELL', 'powershell');				// ['shell' (''), 'powershell', 'unixshell'] shell using
@@ -39,13 +42,8 @@ ini_set("error_reporting", "E_ALL ^E_NOTICE");
 	define('LOG', 'log/get_lyrics_link.log');	// path to log file (set bool false to cancel) fe 'log/get_lyrics_link.log'
 
 
-	////// TODO Разобраться с системой рассчета релевантности. упростить условия вызова функции  парсера
-				// + Разобрался, упростил
-	////// TODO Использовать тег TRACK->ARTIST для треков с various artists
-				// + Если артист = various artists, то он берется из TRACK->ARTIST
-				////// TODO Придумать как учитывать всех артистов из TRACK->ARTIST в рассчете индекса схожести
-
-	////// TODO Пофиксить функцию опретеделия id станции
+	////// TODO: Use all artists from TRACK->ARTIST if last one consists of more than one artist
+	////// TODO: Fix station id getter function (JS plugin)
 
 
 

@@ -265,13 +265,17 @@
 				</QUERIES>';
 			}
 
-			$ch = curl_init('https://c'.substr_replace(GRACENOTE_CLIENT_ID, null, strpos(GRACENOTE_CLIENT_ID, '-')).'.web.cddbp.net/webapi/xml/1.0/');
-			curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+			// $ch = curl_init('https://c'.substr_replace(GRACENOTE_CLIENT_ID, null, strpos(GRACENOTE_CLIENT_ID, '-')).'.web.cddbp.net/webapi/xml/1.0/');
+			$ch = curl_init(GRACENOTE_HOST);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // false for SSL work
 			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // false for SSL work
 			curl_setopt($ch, CURLOPT_POST, true);
+			if (CURL_PROXY != '') {
+				curl_setopt($ch, CURLOPT_PROXY, CURL_PROXY);
+			}
 
 			// CURL SHORT
 			// curl_setopt($ch, CURLOPT_POSTFIELDS, $curl_short); 
@@ -396,10 +400,13 @@
 ########## DOWNLOADING, CONVERSION
 	function download_curl($url, $path) {
 		$ch = curl_init(str_replace(" ","%20",$url)); //Here is the file we are downloading, replace spaces with %20
-		curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 		// curl_setopt($ch, CURLOPT_FILE, $fp); // here it sais to curl to just save it
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+		if (CURL_PROXY != '') {
+			curl_setopt($ch, CURLOPT_PROXY, CURL_PROXY);
+		}
 		
 		$data = curl_exec($ch);//get curl response
 		$curl_info = curl_getinfo($ch);
@@ -679,164 +686,166 @@
 
 	};
 	/**/
-	function get_lyrics_link($song_art, $song_name) {
-		global $debug;
-		// $song_art = 'The Offspring';
-		// $song_name = 'Dirty Magic';
-		// $song_art = 'Edward Sharpe & The Magnetic Zeros';
-		// $song_name = 'Home';
 
-		if ($song_art AND $song_name) {
-			$song_art = str_replace("'", "\'", $song_art);
-			$song_name = str_replace("'", "\'", $song_name);
-			if (strstr($song_name, '('))
-			$song_name = substr_replace($song_name, null, strpos($song_name, '('));
 
-			// delete unusefull info
-			$song_name = str_replace('Single Version', null, $song_name);
-
-			$search_host = 'https://www.google.ru/';
-			$search_query = 'search?q=site:letssingit.com '.$song_art.' - '.$song_name.'';
-			$search_url = str_replace('&', '%26', $search_host.$search_query);
-			$search_url = str_replace('+', '%2B', $search_url);
-			$search_url = str_replace(' ', '+', $search_url);
-
-			##### Geting cookies
-				# $search_query = null;
-				# $ch = curl_init($search_host);
-				# curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-				# curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-				# curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-
-				# curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // for SSL work
-				# curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // for SSL work
-				# 
-				# curl_setopt($ch,CURLOPT_HEADER,true);
-				# curl_setopt($ch,CURLOPT_NOBODY,true);
-
-				# $data = curl_exec($ch);
-				# $data = explode("\r\n", $data);
-				# $cookies = null;
-				# foreach ($data AS $val) {
-				# 	if (strstr($val, 'Set-Cookie:')) {
-				# 		if ($cookies)
-				# 			$cookies .= '; ';
-				# 		$cookies .= trim(str_replace('Set-Cookie: ', null, $val));
-				# 	}
-				# }
- 				# // echo($cookies);
-				# curl_close($ch);
-
-			##### parsing http://artists.letssingit.com link from google
-				$ch = curl_init($search_url);
-				curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-				curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-
-				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // for SSL work
-				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // for SSL work
-				// curl_setopt($ch,CURLINFO_HEADER_OUT,true);
-
-				$headers = array(
-					'User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:19.0) Gecko/20100101 Firefox/19.0',
-					'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
-					'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-					'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
-					'Accept-Encoding: deflate',
-					// 'Cookie: '.$cookie.'',
-					'Connection: keep-alive'
-				); 
-
-				$link = null;
-				$data = curl_exec($ch);
-
-				// echo($data);
-
-				########################################
-				########## WORD PROCESSOR - полнещая каша, сам хер когда разберусь = )
-					$data = substr_replace($data, null, 0, strpos($data, '<ol>') + strlen('<ol>'));
-					$data = substr_replace($data, null, strpos($data, '</ol>'));
-					$data = explode('<li class="g">', $data);
-					foreach ($data AS $key => $val) {
-						$val = substr_replace($val, null, 0, strpos($val, '<h3 class="r">'));
-						
-						$data_src[$key] = substr_replace($val, null, 0, strpos($val, 'http://artists.letssingit.com'));
-						$data_src[$key] = substr_replace($data_src[$key], null, strpos($data_src[$key], '"'));
-						if (strstr($data_src[$key], '&'))
-							$data_src[$key] = substr_replace($data_src[$key], null, strpos($data_src[$key], '&'));
-
-						$val = substr_replace($val, null, strpos($val, '</h3>'));
-						$val = strip_tags($val);
-						$val = preg_replace("~[^\w-]~", ' ', $val);
-						$val = preg_replace("~[\s]+~", ' ', $val);
-						if (!$val OR !strstr($val, '-')) {
-							unset($data[$key]);
-							unset($data_src[$key]);
-						} else {
-							$data[$key] = strtolower(' '.$val.' ');
-						}
-					}
-
-					$song_name_arr = preg_replace("~[^\w-]~", ' ', $song_name);
-					$song_name_arr = preg_replace("~[\s]+~", ' ', $song_name_arr);
-					$song_name_arr = str_replace('&', 'amp', $song_name_arr);
-
-					// Оцениваем релевантнасть по 3м вхождениям
-					foreach ($data as $key => $value) {
-						// $data_count[$key] += substr_count_array($value, $song_name_arr);
-						$data_count[$key] += substr_count($value, strtolower('- '.$song_name_arr.' lyrics') );
-						$data_count[$key] += substr_count($value, strtolower($song_name_arr.' lyrics') );
-						$data_count[$key] += substr_count($value, strtolower($song_name_arr) );
-					}
-
-					foreach ($data_src as $key => $value) {
-						if (!$link) {
-							$link = $value;
-							$link_key = $key;
-						}
-						
-						if (!$max_count)
-							$max_count = $data_count[$key];
-
-						if ($data_count[$key] > $max_count) {
-							$link = $value;
-							$max_count = $data_count[$key];			
-							$link_key = $key;
-						}
-					}
-
-					/**/
-					if ($debug) {
-						echo('<pre>');
-						print_r ($data);
-						print_r ($data_count);
-						print_r ($data_src);
-						die();
-					}
-					/**/
-					if (LOG) {
-						if (strstr(LOG, '/') AND !is_dir(dirname(LOG)))
-							mkdir(dirname(LOG), 0755, true);
-
-						$log .= '##### '.$song_art.' - '.$song_name."\r\n";
-						$log .= $link."\r\n";
-						$log .= serialize(array('#'.$link_key.'#'.$max_count, date("Y-m-d H:i:s"), $data, $data_count, $data_src))."\r\n";
-						error_log($log, 3, LOG);
-					}
-				##########
-				########################################
-
-				# if (strstr($data, 'artists.letssingit.com')) {
-				# 	$link = substr_replace($data, null, 0, strpos($data, 'http://artists.letssingit.com'));
-				# 	$link = substr_replace($link, null, strpos($link, '"'));
-				# 	if (strstr($link, '&'))
-				# 		$link = substr_replace($link, null, strpos($link, '&'));
-				# }
-
-			if (strstr($link, 'artists.letssingit.com'))
-				return $link;
-		}
-
-		return false;
-	}
+//	function get_lyrics_link($song_art, $song_name) {
+//		global $debug;
+//		// $song_art = 'The Offspring';
+//		// $song_name = 'Dirty Magic';
+//		// $song_art = 'Edward Sharpe & The Magnetic Zeros';
+//		// $song_name = 'Home';
+//
+//		if ($song_art AND $song_name) {
+//			$song_art = str_replace("'", "\'", $song_art);
+//			$song_name = str_replace("'", "\'", $song_name);
+//			if (strstr($song_name, '('))
+//			$song_name = substr_replace($song_name, null, strpos($song_name, '('));
+//
+//			// delete unusefull info
+//			$song_name = str_replace('Single Version', null, $song_name);
+//
+//			$search_host = 'https://www.google.ru/';
+//			$search_query = 'search?q=site:letssingit.com '.$song_art.' - '.$song_name.'';
+//			$search_url = str_replace('&', '%26', $search_host.$search_query);
+//			$search_url = str_replace('+', '%2B', $search_url);
+//			$search_url = str_replace(' ', '+', $search_url);
+//
+//			##### Geting cookies
+//				# $search_query = null;
+//				# $ch = curl_init($search_host);
+//				# curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+//				# curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+//				# curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+//
+//				# curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // for SSL work
+//				# curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // for SSL work
+//				# 
+//				# curl_setopt($ch,CURLOPT_HEADER,true);
+//				# curl_setopt($ch,CURLOPT_NOBODY,true);
+//
+//				# $data = curl_exec($ch);
+//				# $data = explode("\r\n", $data);
+//				# $cookies = null;
+//				# foreach ($data AS $val) {
+//				# 	if (strstr($val, 'Set-Cookie:')) {
+//				# 		if ($cookies)
+//				# 			$cookies .= '; ';
+//				# 		$cookies .= trim(str_replace('Set-Cookie: ', null, $val));
+//				# 	}
+//				# }
+// 				# // echo($cookies);
+//				# curl_close($ch);
+//
+//			##### parsing http://artists.letssingit.com link from google
+//				$ch = curl_init($search_url);
+//				curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+//				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+//				curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+//
+//				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // for SSL work
+//				curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // for SSL work
+//				// curl_setopt($ch,CURLINFO_HEADER_OUT,true);
+//
+//				$headers = array(
+//					'User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:19.0) Gecko/20100101 Firefox/19.0',
+//					'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
+//					'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+//					'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
+//					'Accept-Encoding: deflate',
+//					// 'Cookie: '.$cookie.'',
+//					'Connection: keep-alive'
+//				); 
+//
+//				$link = null;
+//				$data = curl_exec($ch);
+//
+//				// echo($data);
+//
+//				########################################
+//				########## WORD PROCESSOR - полнещая каша, сам хер когда разберусь = )
+//					$data = substr_replace($data, null, 0, strpos($data, '<ol>') + strlen('<ol>'));
+//					$data = substr_replace($data, null, strpos($data, '</ol>'));
+//					$data = explode('<li class="g">', $data);
+//					foreach ($data AS $key => $val) {
+//						$val = substr_replace($val, null, 0, strpos($val, '<h3 class="r">'));
+//						
+//						$data_src[$key] = substr_replace($val, null, 0, strpos($val, 'http://artists.letssingit.com'));
+//						$data_src[$key] = substr_replace($data_src[$key], null, strpos($data_src[$key], '"'));
+//						if (strstr($data_src[$key], '&'))
+//							$data_src[$key] = substr_replace($data_src[$key], null, strpos($data_src[$key], '&'));
+//
+//						$val = substr_replace($val, null, strpos($val, '</h3>'));
+//						$val = strip_tags($val);
+//						$val = preg_replace("~[^\w-]~", ' ', $val);
+//						$val = preg_replace("~[\s]+~", ' ', $val);
+//						if (!$val OR !strstr($val, '-')) {
+//							unset($data[$key]);
+//							unset($data_src[$key]);
+//						} else {
+//							$data[$key] = strtolower(' '.$val.' ');
+//						}
+//					}
+//
+//					$song_name_arr = preg_replace("~[^\w-]~", ' ', $song_name);
+//					$song_name_arr = preg_replace("~[\s]+~", ' ', $song_name_arr);
+//					$song_name_arr = str_replace('&', 'amp', $song_name_arr);
+//
+//					// Оцениваем релевантнасть по 3м вхождениям
+//					foreach ($data as $key => $value) {
+//						// $data_count[$key] += substr_count_array($value, $song_name_arr);
+//						$data_count[$key] += substr_count($value, strtolower('- '.$song_name_arr.' lyrics') );
+//						$data_count[$key] += substr_count($value, strtolower($song_name_arr.' lyrics') );
+//						$data_count[$key] += substr_count($value, strtolower($song_name_arr) );
+//					}
+//
+//					foreach ($data_src as $key => $value) {
+//						if (!$link) {
+//							$link = $value;
+//							$link_key = $key;
+//						}
+//						
+//						if (!$max_count)
+//							$max_count = $data_count[$key];
+//
+//						if ($data_count[$key] > $max_count) {
+//							$link = $value;
+//							$max_count = $data_count[$key];			
+//							$link_key = $key;
+//						}
+//					}
+//
+//					/**/
+//					if ($debug) {
+//						echo('<pre>');
+//						print_r ($data);
+//						print_r ($data_count);
+//						print_r ($data_src);
+//						die();
+//					}
+//					/**/
+//					if (LOG) {
+//						if (strstr(LOG, '/') AND !is_dir(dirname(LOG)))
+//							mkdir(dirname(LOG), 0755, true);
+//
+//						$log .= '##### '.$song_art.' - '.$song_name."\r\n";
+//						$log .= $link."\r\n";
+//						$log .= serialize(array('#'.$link_key.'#'.$max_count, date("Y-m-d H:i:s"), $data, $data_count, $data_src))."\r\n";
+//						error_log($log, 3, LOG);
+//					}
+//				##########
+//				########################################
+//
+//				# if (strstr($data, 'artists.letssingit.com')) {
+//				# 	$link = substr_replace($data, null, 0, strpos($data, 'http://artists.letssingit.com'));
+//				# 	$link = substr_replace($link, null, strpos($link, '"'));
+//				# 	if (strstr($link, '&'))
+//				# 		$link = substr_replace($link, null, strpos($link, '&'));
+//				# }
+//
+//			if (strstr($link, 'artists.letssingit.com'))
+//				return $link;
+//		}
+//
+//		return false;
+//	}
 ?>

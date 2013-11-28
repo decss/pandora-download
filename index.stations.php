@@ -35,3 +35,5 @@ function stationsImplode($path1, $path2) {
 
 // echo '<pre>';
 // stationsImplode('1','2');
+
+// stationsImplode('E:\C\decss\pandora-maintest-2', 'E:\D_Work\pandora-maintest-2');
