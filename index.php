@@ -24,7 +24,7 @@ ini_set("error_reporting", "E_ALL ^E_NOTICE");
 	define('GRACENOTE_HOST', 'https://208.72.242.176/webapi/xml/1.0/');						//
 	define('CURL_PROXY', '');																// ['', '127.0.0.1:8080'], '' - don't use proxy
 
-	define('DOWNLOAD_FOLDER', 'E:'.DIR_DELIM.'pandora-maintest-2');
+	define('DOWNLOAD_FOLDER', 'E:' . DIR_DELIM . 'Music' . DIR_DELIM . 'pandora-maintest-2');
 	define('SHELL', 'powershell');				// ['shell' (''), 'powershell', 'unixshell'] shell using
 
 	define('IN_TRACK_EXT', 	'm4a');				// track extension pandora returns, default 'm4a'
