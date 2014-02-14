@@ -86,15 +86,6 @@ HEREDOC;
 
 		$meta['metaBest'] = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', $response['option']);
 
-		// foreach ($response['correlations'] as $correlationIndex) {
-			// $meta['correlationIndex'][] = $correlationIndex;
-		// }
-		// if ($meta['correlationIndex'] < CORRELATION) {
-			// $meta['long'] = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', 'noalbum');
-			// $meta['correlationIndex2'] = getCorrelationIndex($jsonArr, $meta['long']);
-		// }
-		// print_r($jsonArr); print_r($meta); exit;
-
         // Lyrics
         list($lyrics, $lyrics_url, $lyrics_page_url, $lyrics_page_header, $lyrics_length, $lyrics_height) = parse_lyrics($jsonArr['artist'], $jsonArr['song'], true);
         
@@ -122,7 +113,6 @@ HEREDOC;
 	if ($jsonStr) {
 		$jsonArr = unserialize($jsonStr);
 		unset($flag);
-
 
 
 		/**/ ### PREPARING VARIABLES
@@ -214,14 +204,7 @@ HEREDOC;
 
 						$meta_short = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'short', $options['option']);
 						$meta_long  = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', $options['option']);
-						// $correlationIndex = getCorrelationIndex($jsonArr, $meta_short);
 						$correlationIndex = $options['correlation'];
-
-						// if ($correlationIndex < CORRELATION) {
-							// $meta_short = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'short', 'noalbum');
-							// $meta_long = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', 'noalbum');
-							// $correlationIndex = getCorrelationIndex($jsonArr, $meta_short);
-						// }
 
 						if (
 							$correlationIndex >= CORRELATION
@@ -235,35 +218,7 @@ HEREDOC;
 								'comment' => $meta_long['comment'] . '[StationID] => ' . $station_id.'; '
 							));
 						}
-						// print_r ($meta); exit;
-						/** /
-						$meta_tmp = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', true);
-						
-						$correlationIndex = getCorrelationIndex($jsonArr, $meta_tmp);
-						if ($correlationIndex < CORRELATION) {
-							$meta_tmp = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', false);
-							$correlationIndex = getCorrelationIndex($jsonArr, $meta_tmp);
-						}
-
-						if ($correlationIndex >= CORRELATION) {
-							$meta = update_meta($meta, array('genre' => $meta_tmp['genre'], 
-															 'date' => $meta_tmp['date'],
-															 'track' => $meta_tmp['track'],
-															 'comment' => $meta_tmp['comment'].'[StationID] => '.$station_id.'; ')
-									);
-							
-							if (
-								!stristr($meta_tmp['genre'], 'Soundtrack')
-							) {
-								$meta_tmp = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'short');
-								$meta = update_meta($meta, array('genre' => $meta_tmp['genre'])
-										);
-							}
-						}
-						/**/
 					}
-
-
 				}
 
 				// updating tags
@@ -337,8 +292,9 @@ HEREDOC;
 						// selecting all station playlists in pandora download folder
 						$dir = scandir(DOWNLOAD_FOLDER);
 						foreach ($dir AS $file) {
-							if (stristr($file, '.m3u'))
+							if (stristr($file, '.m3u')) {
 								$stations[] = $file;
+							}
 						}
 
 						// searching for the station with the same station-id
@@ -399,13 +355,14 @@ HEREDOC;
 
 
 
+
+
+
+
 /*
 ::test request::
-
-url:
-c12913664.web.cddbp.net
-
-reuest:
+url: c12913664.web.cddbp.net
+reuest: 
 POST /webapi/xml/1.0/ HTTP/1.1
 Host: c12913664.web.cddbp.net
 Content-Length: 388
