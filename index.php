@@ -1,30 +1,27 @@
 <?php
 ini_set("error_reporting", "E_ALL ^E_NOTICE");
-##### README ###########################
-########################################
-# 1. BUGS
-# "year" tag cant' be writen into .mp3 file
-#
-#
+define('CONFIG_FILE', './index.config.php');
 
-////// TODO: Use all artists from TRACK->ARTIST if last one consists of more than one artist
-////// TODO: Fix station id getter function (JS plugin)
+
+
+
+// TODO: Use all artists from TRACK->ARTIST if last one consists of more than one artist
+
 
 
 
 ##### CONFIG ###########################
 ########################################
-	define('CONFIG_FILE', './index.config.php');
-	
 	if (!is_readable(CONFIG_FILE)) {
 		$config = <<<HEREDOC
 <?php
 set_time_limit(300);
 define('DIR_DELIM', DIRECTORY_SEPARATOR);												//
-define('LASTFM_KEY', '03368a415f180be6c8cbf507a694a5c9');								//
+
+define('LASTFM_KEY',          '03368a415f180be6c8cbf507a694a5c9');						//
 define('GRACENOTE_CLIENT_ID', '12913664-3EAEA72CC91CA7F0C8E26D056A234C16');				//
-define('GRACENOTE_USER_ID', '259327967408811593-57E2EF519E7F64662EC811A806A36061');		//
-define('GRACENOTE_HOST', 'https://208.72.242.176/webapi/xml/1.0/');						//
+define('GRACENOTE_USER_ID',   '259327967408811593-57E2EF519E7F64662EC811A806A36061');	//
+define('GRACENOTE_HOST',      'https://208.72.242.176/webapi/xml/1.0/');				//
 define('CURL_PROXY', '');																// ['', '127.0.0.1:8080'], '' - don't use proxy
 
 define('DOWNLOAD_FOLDER', 'E:' . DIR_DELIM . 'Music' . DIR_DELIM . 'pandora-maintest-2');
@@ -35,13 +32,13 @@ define('IN_TRACK_EXT', 	  'm4a');			// track extension pandora returns, default 
 define('OUT_TRACK_EXT',	  'm4a');			// track extension to be converted
 define('IN_COVER_EXT',	  'jpg');			// cover extension pandora returns, default 'jpg'
 define('OUT_COVER_EXT',	  'jpg');			// cover extension to be converted
+define('CORRELATION',     60);			    // int 0-100
 
 define('EMBED_COVERART',  true);			// [true, false] embed coverart to file
 define('EMBED_LYRICS',    true);			// [true, false] embed lyrics to file
 define('PARSE_TAGS',      'remote');		// [false, 'local', 'remote'] parse additional tags (genre, year, track-no, etc) from web
 define('PARSE_LYRICS',    true);			// [false, true] parse lyrics
 define('PARSE_PLAYLISTS', true);			// [true, false] 
-define('CORRELATION',     60);			    // int
 
 define('PARSE_PLAYLISTS_GENRE', true);		//
 define('PARSE_PLAYLISTS_MOOD',  true);		//
@@ -60,12 +57,12 @@ HEREDOC;
 
 
 
-
 ##### REQUIRE ##########################
 ########################################
 	require_once CONFIG_FILE;
 	require_once 'index.func.php';
 	require_once 'require/functions.php';
+
 
 
 
@@ -114,7 +111,6 @@ HEREDOC;
 		echo formatJsonAnswer($meta);
 		exit;
 	}
-
 
 
 
@@ -415,16 +411,16 @@ Host: c12913664.web.cddbp.net
 Content-Length: 388
 
 <QUERIES>
-  <LANG>eng</LANG>
-  <AUTH>
-    <CLIENT>12913664-3EAEA72CC91CA7F0C8E26D056A234C16</CLIENT>
-    <USER>259327967408811593-57E2EF519E7F64662EC811A806A36061</USER>
-  </AUTH>
-  <QUERY CMD="ALBUM_SEARCH">
-    <TEXT TYPE="ARTIST">flying lotus</TEXT>
-    <TEXT TYPE="ALBUM_TITLE">until the quiet comes</TEXT>
-    <TEXT TYPE="TRACK_TITLE">all in</TEXT>
-  </QUERY>
+	<LANG>eng</LANG>
+	<AUTH>
+		<CLIENT>12913664-3EAEA72CC91CA7F0C8E26D056A234C16</CLIENT>
+		<USER>259327967408811593-57E2EF519E7F64662EC811A806A36061</USER>
+	</AUTH>
+	<QUERY CMD="ALBUM_SEARCH">
+		<TEXT TYPE="ARTIST">flying lotus</TEXT>
+		<TEXT TYPE="ALBUM_TITLE">until the quiet comes</TEXT>
+		<TEXT TYPE="TRACK_TITLE">all in</TEXT>
+	</QUERY>
 </QUERIES>
 */
 
