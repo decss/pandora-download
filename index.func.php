@@ -2,9 +2,10 @@
 
 ########## NAMES, FILTERS, JSON
 	function fix_name($name) {
+		$name = str_replace('->', '_', $name);
 		$name = str_replace('/', ', ', $name);
+		$name = preg_replace("~[\\\/:*?\"<>|]~", ' ', $name);
 		$name = preg_replace("~ \s* ~", ' ', $name);
-		$name = preg_replace("~[\\\/:*?\"<>|]~", null, $name);
 		return $name;
 	}
 
@@ -317,9 +318,9 @@
 			// }
 			
 			$meta['date'] 		= (string)$xml_long->RESPONSE->ALBUM->DATE;
-			$meta_EXT['TR_GENRE'] 		= simplexml_implode('->', $xml_long->RESPONSE->ALBUM->GENRE);
-			$meta_EXT['TR_MOOD']		= simplexml_implode('->', $xml_long->RESPONSE->ALBUM->TRACK->MOOD);
-			$meta_EXT['TR_TEMPO']		= simplexml_implode('->', $xml_long->RESPONSE->ALBUM->TRACK->TEMPO);
+			$meta['TR_GENRE'] 	= simplexml_implode('->', $xml_long->RESPONSE->ALBUM->GENRE);
+			$meta['TR_MOOD']	= simplexml_implode('->', $xml_long->RESPONSE->ALBUM->TRACK->MOOD);
+			$meta['TR_TEMPO']	= simplexml_implode('->', $xml_long->RESPONSE->ALBUM->TRACK->TEMPO);
 			$meta_EXT['ART_ERA'] 		= simplexml_implode('->', $xml_long->RESPONSE->ALBUM->ARTIST_ERA);
 			$meta_EXT['ART_ORIGIN'] 	= simplexml_implode('->', $xml_long->RESPONSE->ALBUM->ARTIST_ORIGIN);
 			$meta_EXT['ART_TYPE'] 		= simplexml_implode('->', $xml_long->RESPONSE->ALBUM->ARTIST_TYPE);
@@ -399,6 +400,10 @@
 
 ########## DOWNLOADING, CONVERSION
 	function download_curl($url, $path) {
+		if (IS_DOWNLOAD == false) {
+			return 200;
+		}
+
 		$ch = curl_init(str_replace(" ","%20",$url)); //Here is the file we are downloading, replace spaces with %20
 		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 		// curl_setopt($ch, CURLOPT_FILE, $fp); // here it sais to curl to just save it
@@ -500,14 +505,17 @@
 		}
 	}
 
-	function station_checkPath($station_id, $station_song_path) {
+	function station_checkPath($playlistName, $station_song_path) {
 		$in_station = false;
-		$station = 'stations/'.$station_id;
+		$station = 'stations/' . $playlistName;
 
-		// read file for specific station
+		// Check if dest playlist exists
+		if (is_file(DOWNLOAD_FOLDER . DIR_DELIM . $playlistName) != true) {
+			return false;
+		}
+
+		// checking if track already in playlist
 		$station_arr = file($station);
-
-		// checking if track exist
 		foreach ($station_arr AS $line) {
 			if (stristr($line, $station_song_path))
 				$in_station = true;
@@ -527,6 +535,61 @@
 			$station_id = trim(str_replace('#ID:', null, $station_arr[0]));
 
 		return $station_id;
+	}
+
+
+	function getPlaylistNames($str, $prefix = null) {
+		if (stristr($str, '->')) {
+			$strArr = explode('->', $str);
+		} elseif (strlen($str) != 0) {
+			$strArr[0] = $str;
+		} else {
+			return false;
+		}
+
+		$playlistNames = array();
+		foreach ($strArr AS $key => $item) {
+			for ($i = 0; $i <= $key; $i++) {
+				if ($playlistNames[$key]) {
+					$playlistNames[$key] .= '_';
+				}
+				$playlistNames[$key] .= $strArr[$i];
+			}
+		}
+		foreach ($playlistNames AS $key => $item) {
+			$playlistNames[$key] = $path . $prefix . fix_name($item) . '.m3u';
+		}
+
+		return $playlistNames;
+	}
+
+	function makePlaylists($playlistNames, $station_song_path, $path = null) {
+		if (empty($playlistNames)) {
+			return false;
+		}
+
+		foreach ($playlistNames AS $playlistName) {
+			if ( station_checkPath($playlistName, $station_song_path) == false ) {
+				// backup system station file 
+				station_backup($playlistName);
+
+				// update station playlist in system folder
+				station_update($playlistName, $station_song_path);
+
+				// Checking playlist's folder
+				$playlistPath = DOWNLOAD_FOLDER . DIR_DELIM . $path . DIR_DELIM . $playlistName;
+
+				if (!is_dir(dirname($playlistPath))) {
+					mkdir(dirname($playlistPath), 0777, true);
+				}
+
+				// replacing station's playlist
+				if (is_file($playlistPath)) {
+					unlink($playlistPath);
+				}
+				copy('stations/' . $playlistName, $playlistPath);
+			}
+		}	
 	}
 
 

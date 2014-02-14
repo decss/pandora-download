@@ -30,29 +30,32 @@ define('CURL_PROXY', '');																// ['', '127.0.0.1:8080'], '' - don't u
 define('DOWNLOAD_FOLDER', 'E:' . DIR_DELIM . 'Music' . DIR_DELIM . 'pandora-maintest-2');
 define('SHELL', 'powershell');				// ['shell' (''), 'powershell', 'unixshell'] shell using
 
-define('IN_TRACK_EXT', 	'm4a');				// track extension pandora returns, default 'm4a'
-define('OUT_TRACK_EXT',	'm4a');				// track extension to be converted
-define('IN_COVER_EXT',	'jpg');				// cover extension pandora returns, default 'jpg'
-define('OUT_COVER_EXT',	'jpg');				// cover extension to be converted
+define('IS_DOWNLOAD',     true);			//
+define('IN_TRACK_EXT', 	  'm4a');			// track extension pandora returns, default 'm4a'
+define('OUT_TRACK_EXT',	  'm4a');			// track extension to be converted
+define('IN_COVER_EXT',	  'jpg');			// cover extension pandora returns, default 'jpg'
+define('OUT_COVER_EXT',	  'jpg');			// cover extension to be converted
 
 define('EMBED_COVERART',  true);			// [true, false] embed coverart to file
 define('EMBED_LYRICS',    true);			// [true, false] embed lyrics to file
 define('PARSE_TAGS',      'remote');		// [false, 'local', 'remote'] parse additional tags (genre, year, track-no, etc) from web
 define('PARSE_LYRICS',    true);			// [false, true] parse lyrics
 define('PARSE_PLAYLISTS', true);			// [true, false] 
+define('CORRELATION',     60);			    // int
+
+define('PARSE_PLAYLISTS_GENRE', true);		//
+define('PARSE_PLAYLISTS_MOOD',  true);		//
+define('PARSE_PLAYLISTS_TEMPO', true);		//
+
+define('PLAYLISTS_GENRE_PATH',  '');		//
+define('PLAYLISTS_MOOD_PATH',   '');		//
+define('PLAYLISTS_TEMPO_PATH',  '');		//
 
 define('LOG', 'log/get_lyrics_link.log');	// path to log file (set bool false to cancel) fe 'log/get_lyrics_link.log'
 ?>
 HEREDOC;
 		file_put_contents(CONFIG_FILE, $config);
-		// $fh = fopen(CONFIG_FILE, 'w+');
-		// fwrite($hf, $config);
-		// fclose($fh);
 	}
-
-	require_once CONFIG_FILE;
-
-
 
 
 
@@ -60,6 +63,7 @@ HEREDOC;
 
 ##### REQUIRE ##########################
 ########################################
+	require_once CONFIG_FILE;
 	require_once 'index.func.php';
 	require_once 'require/functions.php';
 
@@ -88,7 +92,7 @@ HEREDOC;
 		// foreach ($response['correlations'] as $correlationIndex) {
 			// $meta['correlationIndex'][] = $correlationIndex;
 		// }
-		// if ($meta['correlationIndex'] < 60) {
+		// if ($meta['correlationIndex'] < CORRELATION) {
 			// $meta['long'] = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', 'noalbum');
 			// $meta['correlationIndex2'] = getCorrelationIndex($jsonArr, $meta['long']);
 		// }
@@ -217,14 +221,14 @@ HEREDOC;
 						// $correlationIndex = getCorrelationIndex($jsonArr, $meta_short);
 						$correlationIndex = $options['correlation'];
 
-						// if ($correlationIndex < 60) {
+						// if ($correlationIndex < CORRELATION) {
 							// $meta_short = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'short', 'noalbum');
 							// $meta_long = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', 'noalbum');
 							// $correlationIndex = getCorrelationIndex($jsonArr, $meta_short);
 						// }
 
 						if (
-							$correlationIndex >= 60
+							$correlationIndex >= CORRELATION
 							AND !stristr($meta_short['genre'], 'Soundtrack')
 							AND !stristr($meta_short['genre'], 'Original Film/TV Music')
 						) {
@@ -240,12 +244,12 @@ HEREDOC;
 						$meta_tmp = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', true);
 						
 						$correlationIndex = getCorrelationIndex($jsonArr, $meta_tmp);
-						if ($correlationIndex < 60) {
+						if ($correlationIndex < CORRELATION) {
 							$meta_tmp = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', false);
 							$correlationIndex = getCorrelationIndex($jsonArr, $meta_tmp);
 						}
 
-						if ($correlationIndex >= 60) {
+						if ($correlationIndex >= CORRELATION) {
 							$meta = update_meta($meta, array('genre' => $meta_tmp['genre'], 
 															 'date' => $meta_tmp['date'],
 															 'track' => $meta_tmp['track'],
@@ -288,8 +292,9 @@ HEREDOC;
 					if ($lyrics) {
 						if (!is_dir(dirname($lyrics_path)))
 							mkdir(dirname($lyrics_path), 0755, true);
-
-						file_put_contents($lyrics_path, $lyrics);
+						if (IS_DOWNLOAD) {
+							file_put_contents($lyrics_path, $lyrics);
+						}		
 					}
 				}
 
@@ -310,17 +315,20 @@ HEREDOC;
 				// AND $jsonArr['elem'] == 'like'
 			) {
 				// checking station's folders
-				if (!is_dir('stations'))
+				if (!is_dir('stations')) {
 					mkdir('stations', 0755);
+				}
 				
-				if (!is_dir('stations/backup'))
+				if (!is_dir('stations/backup')) {
 					mkdir('stations/backup', 0755);
+				}
 
 				// creating relative song path for the playlist
-				if ($flag['track_conv'] === false)
+				if ($flag['track_conv'] === false) {
 					$station_song_path = $song_folder . DIR_DELIM . $song_name . '.' . IN_TRACK_EXT;
-				else
+				} else {
 					$station_song_path = $song_folder . DIR_DELIM . $song_name . '.' . OUT_TRACK_EXT;
+				}
 
 				// STATION'S PLAYLISTS
 					if ( isset($station_id) AND station_checkPath($station_id, $station_song_path) == false ) {
@@ -351,41 +359,34 @@ HEREDOC;
 					}
 
 
-				// GENRE'S PLAYLISTS
-					if (!$meta_short) {
+				// GENRE, MOOD, TEMPO PLAYLISTS
+					if (!$meta_long) {
 						$options = getParseOptions($jsonArr['artist'], $jsonArr['song'], $jsonArr['album']);
 
-						$meta_short = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'short', $options['option']);
 						$meta_long  = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', $options['option']);
-						// $correlationIndex = getCorrelationIndex($jsonArr, $meta_short);
 						$correlationIndex = $options['correlation'];
-
-						// if ($correlationIndex < 60) {
-							// $meta_short = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'short', 'noalbum');
-							// $meta_long = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', 'noalbum');
-							// $correlationIndex = getCorrelationIndex($jsonArr, $meta_short);
-						// }
 					}
 
-					// Station file name
-					$station_id_genre = fix_name('Genre - ' . $meta_short['genre']);
-					if ( station_checkPath($station_id_genre, $station_song_path) == false ) {
-
-						if ($meta_short AND $correlationIndex >= 60) {
-
-							// backup system station file 
-							station_backup($station_id_genre);
-
-							// update station playlist in system folder
-							station_update($station_id_genre, $station_song_path);
-
-							// replacing station's playlist
-							if (is_file(DOWNLOAD_FOLDER . DIR_DELIM . $station_id_genre . '.m3u')) {
-								unlink(DOWNLOAD_FOLDER . DIR_DELIM . $station_id_genre . '.m3u');
-							}
-							copy('stations/'.$station_id_genre, DOWNLOAD_FOLDER . DIR_DELIM . $station_id_genre . '.m3u');
+					if ($correlationIndex >= CORRELATION) {
+						// Genre
+						if (PARSE_PLAYLISTS_GENRE) {
+							$playlistNames = getPlaylistNames($meta_long['TR_GENRE'], '[G] ');
+							makePlaylists($playlistNames, $station_song_path, PLAYLISTS_GENRE_PATH);
+						}
+						
+						// Mood
+						if (PARSE_PLAYLISTS_MOOD) {
+							$playlistNames = getPlaylistNames($meta_long['TR_MOOD'], '[M] ');
+							makePlaylists($playlistNames, $station_song_path, PLAYLISTS_MOOD_PATH);
+						}
+						
+						// Tempo
+						if (PARSE_PLAYLISTS_TEMPO) {
+							$playlistNames = getPlaylistNames($meta_long['TR_TEMPO'], '[T] ');
+							makePlaylists($playlistNames, $station_song_path, PLAYLISTS_TEMPO_PATH);
 						}
 					}
+
 
 			}
 			/**/
