@@ -24,10 +24,10 @@ define('GRACENOTE_USER_ID',   '259327967408811593-57E2EF519E7F64662EC811A806A360
 define('GRACENOTE_HOST',      'https://208.72.242.176/webapi/xml/1.0/');				//
 define('CURL_PROXY', '');																// ['', '127.0.0.1:8080'], '' - don't use proxy
 
-define('DOWNLOAD_FOLDER', 'E:' . DIR_DELIM . 'Music' . DIR_DELIM . 'pandora-maintest-2');
+define('IS_DOWNLOAD',     true);            //
+define('DOWNLOAD_FOLDER', 'E:' . DIR_DELIM . 'Music' . DIR_DELIM . 'pandora-maintest-3');
 define('SHELL', 'powershell');				// ['shell' (''), 'powershell', 'unixshell'] shell using
 
-define('IS_DOWNLOAD',     true);			//
 define('IN_TRACK_EXT', 	  'm4a');			// track extension pandora returns, default 'm4a'
 define('OUT_TRACK_EXT',	  'm4a');			// track extension to be converted
 define('IN_COVER_EXT',	  'jpg');			// cover extension pandora returns, default 'jpg'
