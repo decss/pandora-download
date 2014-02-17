@@ -268,7 +268,7 @@
 
 			// $ch = curl_init('https://c'.substr_replace(GRACENOTE_CLIENT_ID, null, strpos(GRACENOTE_CLIENT_ID, '-')).'.web.cddbp.net/webapi/xml/1.0/');
 			$ch = curl_init(GRACENOTE_HOST);
-			curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 60);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // false for SSL work
@@ -405,7 +405,7 @@
 		}
 
 		$ch = curl_init(str_replace(" ","%20",$url)); //Here is the file we are downloading, replace spaces with %20
-		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 240);
 		// curl_setopt($ch, CURLOPT_FILE, $fp); // here it sais to curl to just save it
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
