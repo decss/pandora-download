@@ -10,19 +10,19 @@ define('CONFIG_FILE', './index.config.php');
 
 
 
-##### CONFIG ###########################
+##### CONFIG TEMPLATE###################
 ########################################
-	if (!is_readable(CONFIG_FILE)) {
-		$config = <<<HEREDOC
+    if (!is_readable(CONFIG_FILE)) {
+        $config = <<<HEREDOC
 <?php
 set_time_limit(300);
-define('DIR_DELIM', DIRECTORY_SEPARATOR);												//
+define('DIR_DELIM', DIRECTORY_SEPARATOR);
 
-define('LASTFM_KEY',          '03368a415f180be6c8cbf507a694a5c9');						//
-define('GRACENOTE_CLIENT_ID', '12913664-3EAEA72CC91CA7F0C8E26D056A234C16');				//
-define('GRACENOTE_USER_ID',   '259327967408811593-57E2EF519E7F64662EC811A806A36061');	//
-define('GRACENOTE_HOST',      'https://208.72.242.176/webapi/xml/1.0/');				//
-define('CURL_PROXY', '');																// ['', '127.0.0.1:8080'], '' - don't use proxy
+define('LASTFM_KEY',          '');
+define('GRACENOTE_CLIENT_ID', '');
+define('GRACENOTE_USER_ID',   '');
+define('GRACENOTE_HOST',      'https://208.72.242.176/webapi/xml/1.0/');
+define('CURL_PROXY', 		  '');                                       // ['', '127.0.0.1:8080'], '' - don't use proxy
 
 define('IS_DOWNLOAD',     true);            //
 define('DOWNLOAD_FOLDER', 'E:' . DIR_DELIM . 'Music' . DIR_DELIM . 'pandora-maintest-3');
@@ -84,10 +84,13 @@ HEREDOC;
 		$meta['correlations'] = $response['correlations'];
 		$meta['metaResp']     = $response['meta'];
 
-		$meta['metaBest'] = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', $response['option']);
+		$meta['metaBest'] = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 
+													 'long', $response['option']);
 
         // Lyrics
-        list($lyrics, $lyrics_url, $lyrics_page_url, $lyrics_page_header, $lyrics_length, $lyrics_height) = parse_lyrics($jsonArr['artist'], $jsonArr['song'], true);
+        list($lyrics, $lyrics_url, $lyrics_page_url, $lyrics_page_header, $lyrics_length, $lyrics_height) = parse_lyrics($jsonArr['artist'], 
+        																		 $jsonArr['song'], 
+        																		 true);
         
         $meta['lyrics']             = $lyrics;
         $meta['lyrics_url']         = $lyrics_url;
