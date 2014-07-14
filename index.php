@@ -66,6 +66,19 @@ HEREDOC;
 
 
 
+##### DEBUG ############################
+########################################
+/** /
+$lyrics = parse_lyrics('Limp Bizkit', 'Rollin\'', true);
+print_r($lyrics);
+
+
+exit;
+/**/
+
+
+
+
 ##### API FUNCTIONS ####################
 ########################################
 	if (strip_tags($_GET['question']) == 'here?') {
@@ -373,8 +386,8 @@ Content-Length: 388
 <QUERIES>
 	<LANG>eng</LANG>
 	<AUTH>
-		<CLIENT>12913664-3EAEA72CC91CA7F0C8E26D056A234C16</CLIENT>
-		<USER>259327967408811593-57E2EF519E7F64662EC811A806A36061</USER>
+		<CLIENT></CLIENT>
+		<USER></USER>
 	</AUTH>
 	<QUERY CMD="ALBUM_SEARCH">
 		<TEXT TYPE="ARTIST">flying lotus</TEXT>

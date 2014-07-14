@@ -40,7 +40,7 @@ log('NOTICE: console is running ...');
 				background:black; \
 				height:305px; \
 				min-width:280px; \
-				position:fixed; top:120px; right:0px; \
+				position:fixed; top:140px; right:0px; \
 				border:1px solid white; padding:1px; \
 				font-size:10px; line-height:14px; \
 				font-family:\'lucida console\', Arial; color:white;\

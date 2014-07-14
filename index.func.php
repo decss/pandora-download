@@ -359,6 +359,7 @@
             $lyrics = file_get_contents($lyrics_page_url);
 
         if ($lyrics) {
+			// TODO: make parsing when links are displayed instead of lyrics
         	$lyrics_page_header = substr_replace($lyrics, null, 0, strpos($lyrics, "class=\"WikiaPageHeader\""));
         	$lyrics_page_header = substr_replace($lyrics_page_header, null, 0, strpos($lyrics_page_header, "<h1>") + strlen('<h1>'));
         	$lyrics_page_header = substr_replace($lyrics_page_header, null, strpos($lyrics_page_header, "</h1>"));
