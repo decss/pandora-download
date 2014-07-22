@@ -569,6 +569,7 @@
 			return false;
 		}
 
+		$level = 0;
 		foreach ($playlistNames AS $playlistName) {
 			if ( station_checkPath($playlistName, $station_song_path) == false ) {
 				// backup system station file 
@@ -578,7 +579,12 @@
 				station_update($playlistName, $station_song_path);
 
 				// Checking playlist's folder
-				$playlistPath = DOWNLOAD_FOLDER . DIR_DELIM . $path . DIR_DELIM . $playlistName;
+				if ($level == 0) {
+					$playlistPath = DOWNLOAD_FOLDER . DIR_DELIM . $path . DIR_DELIM . $playlistName;
+				} else {
+					$playlistPath = DOWNLOAD_FOLDER . DIR_DELIM . $path . DIR_DELIM . '_PLAYLISTS' . DIR_DELIM . $playlistName;
+				}
+				$level++;
 
 				if (!is_dir(dirname($playlistPath))) {
 					mkdir(dirname($playlistPath), 0777, true);
@@ -589,6 +595,7 @@
 					unlink($playlistPath);
 				}
 				copy('stations/' . $playlistName, $playlistPath);
+
 			}
 		}	
 	}

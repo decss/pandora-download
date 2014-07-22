@@ -323,7 +323,7 @@ exit;
 						}
 
 						// replacing station's playlist
-						copy('stations/'.$station_id, DOWNLOAD_FOLDER . DIR_DELIM . $station_name . '.m3u');
+						copy('stations/'.$station_id, DOWNLOAD_FOLDER . DIR_DELIM . trim($station_name) . '.m3u');
 					}
 
 
