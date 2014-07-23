@@ -21,8 +21,9 @@
 	
 	function simplexml_implode ($glue = '', $var){
 		if ($var) {
-			foreach ($var AS $value)
+			foreach ($var AS $value) {
 				$array[]=strval($value);
+			}
 
 			return implode($glue, $array);
 		} else 
@@ -67,8 +68,9 @@
 				if (!trim($value))
 					continue; 
 
-				if ($tag == 'genre')
+				if ($tag == 'genre') {
 					$value = ucfirst($value);
+				}
 
 				// m4a, mp3
 				if ($tag == 'album' OR $tag == 'artist' OR $tag == 'genre' OR $tag == 'title' OR $tag == 'track' OR $tag == 'date' OR $tag == 'comment') {
@@ -118,8 +120,9 @@
 		$shell = shell_construct($song_path, $meta);
 		$ext = get_file_ext($song_path);
 		
-		if ($shell)
+		if ($shell) {
 			shell_exec($shell);
+		}
 
 		if (is_file($song_path.'.'.$ext)) {
 			unlink($song_path);
@@ -511,7 +514,8 @@
 		$station = 'stations/' . $playlistName;
 
 		// Check if dest playlist exists
-		if (is_file(DOWNLOAD_FOLDER . DIR_DELIM . $playlistName) != true) {
+		if (is_file(DOWNLOAD_FOLDER . DIR_DELIM . $playlistName) != true
+			OR is_file(DOWNLOAD_FOLDER . DIR_DELIM . '_PLAYLISTS' . DIR_DELIM . $playlistName) != true) {
 			return false;
 		}
 
