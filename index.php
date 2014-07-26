@@ -103,7 +103,8 @@ exit;
         // Lyrics
         list($lyrics, $lyrics_url, $lyrics_page_url, $lyrics_page_header, $lyrics_length, $lyrics_height) = parse_lyrics($jsonArr['artist'], 
                                                                                  $jsonArr['song'], 
-                                                                                 true);
+                                                                                 true, 
+                                                                                 $jsonArr);
         
         $meta['lyrics']             = $lyrics;
         $meta['lyrics_url']         = $lyrics_url;
@@ -251,11 +252,7 @@ exit;
 
                 // downloading lyrics
                 if (PARSE_LYRICS) {
-                    list($lyrics) = parse_lyrics($jsonArr['artist'], $jsonArr['song'], false);
-
-                    if (!$lyrics AND ($jsonArr['artist'] != $meta_short['artist'] OR $jsonArr['song'] != $meta_short['title'])) {
-                        list($lyrics) = parse_lyrics($meta_short['artist'], $meta_short['title'], false);
-                    }
+                    list($lyrics) = parse_lyrics($jsonArr['artist'], $jsonArr['song'], false, $jsonArr);
 
                     if (!$lyrics) {
                         $lyrics = $lyrics_tmp;

@@ -344,13 +344,20 @@
     }
 
 
-    function parse_lyrics($song_art, $song_name, $check = false) {
+    function parse_lyrics($song_art, $song_name, $check = false, $jsonArr = null) {
         $song_art = prepare_for_url($song_art);
         $song_name = prepare_for_url($song_name);
 
         $lyrics_url = 'http://lyrics.wikia.com/api.php?func=getSong&fmt=xml&artist='.$song_art.'&song='.$song_name;
         $lyrics_xml = simplexml_load_file($lyrics_url);
 
+            
+        if ($lyrics_xml->lyrics == 'Not found' AND $jsonArr) {
+            $options    = getParseOptions($jsonArr['artist'], $jsonArr['song'], $jsonArr['album']);
+            $meta_short = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'short', $options['option']);
+            $lyrics_url = 'http://lyrics.wikia.com/api.php?func=getSong&fmt=xml&artist='.$meta_short['artist'].'&song='.$meta_short['title'];
+            $lyrics_xml = simplexml_load_file($lyrics_url);
+        }
 
         if ($lyrics_xml->lyrics != 'Not found') {
             // $lyrics_page_url = (string)$lyrics_xml->url;
