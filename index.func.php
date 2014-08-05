@@ -156,7 +156,9 @@
             $song_path = str_replace("'", "''", $song_path);
 
             if ($metadata AND $song_path)
-                $shell = "powershell ".realpath('.' . DIR_DELIM) . DIR_DELIM."ffmpeg.exe -i '".$song_path."' -acodec copy ".$metadata." '".$song_path.".".$ext."' -y < NUL";
+                $shell = POWERSHELL_PATH . "powershell " 
+                       . realpath('.' . DIR_DELIM) . DIR_DELIM . "ffmpeg.exe -i '" 
+                       . $song_path . "' -acodec copy " . $metadata . " '" . $song_path . "." . $ext . "' -y < NUL";
         }
         
         elseif (SHELL == 'unixshell') {

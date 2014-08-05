@@ -26,7 +26,8 @@ define('CURL_PROXY',          '');                                       // ['',
 
 define('IS_DOWNLOAD',     true);            //
 define('DOWNLOAD_FOLDER', 'E:' . DIR_DELIM . 'Music' . DIR_DELIM . 'pandora-maintest-3');
-define('SHELL', 'powershell');              // ['shell' (''), 'powershell', 'unixshell'] shell using
+define('SHELL',           'powershell');    // ['shell' (''), 'powershell', 'unixshell'] shell using
+define('POWERSHELL_PATH', '%SYSTEMROOT%\System32\WindowsPowerShell\v1.0\\');
 
 define('IN_TRACK_EXT',    'm4a');           // track extension pandora returns, default 'm4a'
 define('OUT_TRACK_EXT',   'm4a');           // track extension to be converted
@@ -63,18 +64,6 @@ HEREDOC;
     require_once 'index.func.php';
     require_once 'require/functions.php';
 
-
-
-
-##### DEBUG ############################
-########################################
-/** /
-$lyrics = parse_lyrics('Limp Bizkit', 'Rollin\'', true);
-print_r($lyrics);
-
-
-exit;
-/**/
 
 
 
@@ -229,9 +218,9 @@ exit;
                             AND !stristr($meta_short['genre'], 'Original Film/TV Music')
                         ) {
                             $meta = update_meta($meta, array(
-                                'genre' => $meta_short['genre'], 
-                                'date' => $meta_short['date'],
-                                'track' => $meta_short['track'],
+                                'genre'   => $meta_short['genre'], 
+                                'date'    => $meta_short['date'],
+                                'track'   => $meta_short['track'],
                                 'comment' => $meta_long['comment'] . '[StationID] => ' . $station_id.'; '
                             ));
                         }
