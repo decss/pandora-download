@@ -210,23 +210,25 @@ exit;
 
 
 /*
-$example = '
+::test request::
+url: c12913664.web.cddbp.net
+reuest: 
 POST /webapi/xml/1.0/ HTTP/1.1
 Host: c12913664.web.cddbp.net
 Content-Length: 388
 
 <QUERIES>
-  <LANG>eng</LANG>
-  <AUTH>
-    <CLIENT></CLIENT>
-    <USER></USER>
-  </AUTH>
-  <QUERY CMD="ALBUM_SEARCH">
-    <TEXT TYPE="ARTIST">flying lotus</TEXT>
-    <TEXT TYPE="ALBUM_TITLE">until the quiet comes</TEXT>
-    <TEXT TYPE="TRACK_TITLE">all in</TEXT>
-  </QUERY>
-</QUERIES>';
+    <LANG>eng</LANG>
+    <AUTH>
+        <CLIENT></CLIENT>
+        <USER></USER>
+    </AUTH>
+    <QUERY CMD="ALBUM_SEARCH">
+        <TEXT TYPE="ARTIST">flying lotus</TEXT>
+        <TEXT TYPE="ALBUM_TITLE">until the quiet comes</TEXT>
+        <TEXT TYPE="TRACK_TITLE">all in</TEXT>
+    </QUERY>
+</QUERIES>
 */
 
 ?>

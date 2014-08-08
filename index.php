@@ -1,5 +1,5 @@
 <?php
-ini_set("error_reporting", "E_ALL ^E_NOTICE");
+ini_set("error_reporting", E_ALL ^ E_NOTICE);
 define('CONFIG_FILE', './index.config.php');
 
 
@@ -67,7 +67,6 @@ HEREDOC;
 
 
 
-
 ##### API FUNCTIONS ####################
 ########################################
     if (strip_tags($_GET['question']) == 'here?') {
@@ -102,9 +101,6 @@ HEREDOC;
         $meta['lyrics_length']      = $lyrics_length;
         $meta['lyrics_height']      = $lyrics_height;
 
-        // echo '<pre>';
-        // echo print_r($response);
-        // echo print_r($meta);
         echo formatJsonAnswer($meta);
         exit;
     }
@@ -115,247 +111,25 @@ HEREDOC;
 ##### BODY #############################
 ########################################
     $jsonStr = strip_tags($_GET['jsonArr']);
-
     if ($jsonStr) {
         $jsonArr = unserialize($jsonStr);
-        unset($flag);
-
-
-        /**/ ### PREPARING VARIABLES
-            $song_art    = fix_name($jsonArr['artist']);
-            $song_alb    = fix_name($jsonArr['album']);
-            $song_name   = fix_name($jsonArr['song']);
-            $cover_name  = $song_alb;
-
-            $song_folder = $song_art . DIR_DELIM . $song_alb;
-
-            $lyrics_path = DOWNLOAD_FOLDER . DIR_DELIM . $song_folder . DIR_DELIM . 'lyrics' . DIR_DELIM . $song_name . '.txt';
-            $song_path   = DOWNLOAD_FOLDER . DIR_DELIM . $song_folder . DIR_DELIM . $song_name . '.' . IN_TRACK_EXT;
-            $cover_path  = DOWNLOAD_FOLDER . DIR_DELIM . $song_folder . DIR_DELIM . $cover_name . '.' . IN_COVER_EXT;
-
-            $song_path_conv  = substr_replace($song_path, OUT_TRACK_EXT, strrpos($song_path, IN_TRACK_EXT));
-            $cover_path_conv = substr_replace($cover_path, OUT_COVER_EXT, strrpos($cover_path, IN_COVER_EXT));
-
-            $station_id   = $jsonArr['station_id'];
-            $station_name = $jsonArr['station_name'];
-            /**/
-
-
-
-        /**/ ### CHECKING DIRS
-            // if download folder does not exist - then create
-            if (!is_dir(DOWNLOAD_FOLDER))
-                mkdir(DOWNLOAD_FOLDER, 755);
-
-            if (!is_dir(DOWNLOAD_FOLDER . DIR_DELIM . $song_folder))
-                mkdir(DOWNLOAD_FOLDER . DIR_DELIM . $song_folder, 755, true);
-            /**/
-
-
-
-        /**/ ### DOWNLOADING TRACK AND COVER FILES
-            if(file_exists($song_path_conv) == false) {
-                $jsonAnswer->song['code'] = download_curl($jsonArr['url_track'], $song_path);
-            } else {
-                $jsonAnswer->song['code'] = 'exist';
-            }
-
-            if($jsonArr['url_cover'] AND file_exists($cover_path_conv) == false) {
-                $jsonAnswer->cover['code'] = download_curl($jsonArr['url_cover'], $cover_path);
-            } elseif ($jsonArr['url_cover'] AND file_exists($cover_path_conv) == true) {
-                $jsonAnswer->cover['code'] = 'exist';
-            } else { 
-                $jsonAnswer->cover['code'] = 'canceled';
-            }
-            /**/
-
-
-
-        /**/ ### CONVERTING TRACK/COVER AND CLEARING THE PATH
-            if ($jsonAnswer->cover['code'] == 200 AND IN_COVER_EXT != OUT_COVER_EXT) {
-                $flag['cover_conv'] = convert_cover($cover_path, $cover_path_conv);
-            }
-
-            if ($jsonAnswer->song['code'] == 200 AND IN_TRACK_EXT != OUT_TRACK_EXT) {
-                $flag['track_conv'] = convert_track($song_path, $song_path_conv);
-            }
-
-            if (is_file($cover_path_conv) == false) {
-                $cover_path_conv = null;
-            }
-
-            if (is_file($song_path_conv) == false) {
-                $song_path_conv = null;
-            }
-
-
-
-        /**/ ### PARSING TAGS
-            if ($jsonAnswer->song['code'] == 200) {
-
-                // Parsing tags
-                if (PARSE_TAGS) {
-                    $meta = update_meta(null, array(
-                        'artist' => $jsonArr['artist'],
-                        'album' => $jsonArr['album'],
-                        'title' => $jsonArr['song']
-                    ));
-
-                    if (PARSE_TAGS == 'remote') {
-                        // gracenote
-                        $withAlbum = true;
-                        /**/
-
-                        $options = getParseOptions($jsonArr['artist'], $jsonArr['song'], $jsonArr['album']);
-
-                        $meta_short = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'short', $options['option']);
-                        $meta_long  = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', $options['option']);
-                        $correlationIndex = $options['correlation'];
-
-                        if (
-                            $correlationIndex >= CORRELATION
-                            AND !stristr($meta_short['genre'], 'Soundtrack')
-                            AND !stristr($meta_short['genre'], 'Original Film/TV Music')
-                        ) {
-                            $meta = update_meta($meta, array(
-                                'genre'   => $meta_short['genre'], 
-                                'date'    => $meta_short['date'],
-                                'track'   => $meta_short['track'],
-                                'comment' => $meta_long['comment'] . '[StationID] => ' . $station_id.'; '
-                            ));
-                        }
-                    }
-                }
-
-                // updating tags
-                if ( $flag['track_conv']) {
-                    update_tags($song_path_conv, $meta[OUT_TRACK_EXT]);
-                } else {
-                    update_tags($song_path_conv, $meta[IN_TRACK_EXT]);
-                }
-
-                // embedding cover art 
-                if (EMBED_COVERART == true AND ($jsonAnswer->cover['code'] == 200 OR $jsonAnswer->cover['code'] == 'exist') AND $cover_path_conv) {
-                    embed_cover($song_path_conv, $cover_path_conv);
-                }
-
-                // downloading lyrics
-                if (PARSE_LYRICS) {
-                    list($lyrics) = parse_lyrics($jsonArr['artist'], $jsonArr['song'], false, $jsonArr);
-
-                    if (!$lyrics) {
-                        $lyrics = $lyrics_tmp;
-                    }
-
-                    if ($lyrics) {
-                        if (!is_dir(dirname($lyrics_path)))
-                            mkdir(dirname($lyrics_path), 0755, true);
-                        if (IS_DOWNLOAD) {
-                            file_put_contents($lyrics_path, $lyrics);
-                        }       
-                    }
-                }
-
-                // embedding lyrics
-                if (EMBED_LYRICS == true AND is_file($lyrics_path)) {
-                    embed_lyrics($song_path_conv, $lyrics_path);
-                }
-            }
-            
-            $jsonAnswer->error["code"] = 0;
-            /**/
-
-
-
-
-        /**/ ### PLAYLISTS
-            if (PARSE_PLAYLISTS AND ($jsonAnswer->song['code'] === 200  OR $jsonAnswer->song['code'] === 'exist') 
-                // AND $jsonArr['elem'] == 'like'
-            ) {
-                // checking station's folders
-                if (!is_dir('stations')) {
-                    mkdir('stations', 0755);
-                }
-                
-                if (!is_dir('stations/backup')) {
-                    mkdir('stations/backup', 0755);
-                }
-
-                // creating relative song path for the playlist
-                if ($flag['track_conv'] === false) {
-                    $station_song_path = $song_folder . DIR_DELIM . $song_name . '.' . IN_TRACK_EXT;
-                } else {
-                    $station_song_path = $song_folder . DIR_DELIM . $song_name . '.' . OUT_TRACK_EXT;
-                }
-
-                // STATION'S PLAYLISTS
-                    if ( isset($station_id) AND station_checkPath($station_id, $station_song_path) == false ) {
-                        // backup system station file 
-                        station_backup($station_id);
-
-                        // update station playlist in system folder
-                        station_update($station_id, $station_song_path);
-
-                        // selecting all station playlists in pandora download folder
-                        $dir = scandir(DOWNLOAD_FOLDER);
-                        foreach ($dir AS $file) {
-                            if (stristr($file, '.m3u')) {
-                                $stations[] = $file;
-                            }
-                        }
-
-                        // searching for the station with the same station-id
-                        if ($stations) {
-                            foreach ($stations AS $station) {
-                                if ($station_id == station_get_id(DOWNLOAD_FOLDER . DIR_DELIM . $station)) {
-                                    unlink(DOWNLOAD_FOLDER . DIR_DELIM . $station);
-                                }
-                            }
-                        }
-
-                        // replacing station's playlist
-                        copy('stations/'.$station_id, DOWNLOAD_FOLDER . DIR_DELIM . trim($station_name) . '.m3u');
-                    }
-
-
-                // GENRE, MOOD, TEMPO PLAYLISTS
-                    if (!$meta_long) {
-                        $options = getParseOptions($jsonArr['artist'], $jsonArr['song'], $jsonArr['album']);
-
-                        $meta_long  = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'long', $options['option']);
-                        $correlationIndex = $options['correlation'];
-                    }
-
-                    if ($correlationIndex >= CORRELATION) {
-                        // Genre
-                        if (PARSE_PLAYLISTS_GENRE) {
-                            $playlistNames = getPlaylistNames($meta_long['TR_GENRE'], '[G] ');
-                            makePlaylists($playlistNames, $station_song_path, PLAYLISTS_GENRE_PATH);
-                        }
-                        
-                        // Mood
-                        if (PARSE_PLAYLISTS_MOOD) {
-                            $playlistNames = getPlaylistNames($meta_long['TR_MOOD'], '[M] ');
-                            makePlaylists($playlistNames, $station_song_path, PLAYLISTS_MOOD_PATH);
-                        }
-                        
-                        // Tempo
-                        if (PARSE_PLAYLISTS_TEMPO) {
-                            $playlistNames = getPlaylistNames($meta_long['TR_TEMPO'], '[T] ');
-                            makePlaylists($playlistNames, $station_song_path, PLAYLISTS_TEMPO_PATH);
-                        }
-                    }
-
-
-            }
-            /**/
     }
 
+    $title    = trim($jsonArr['song']);
+    $album    = trim($jsonArr['album']);
+    $artist   = trim($jsonArr['artist']);
+    $trackUrl = trim($jsonArr['url_track']);
+    $coverUrl = trim($jsonArr['url_cover']);
+    $options  = array(
+                    'stationId'     => trim($jsonArr['station_id']),
+                    'stationName'   => trim($jsonArr['station_name']),
+                    'actionElement' => trim($jsonArr['elem'])
+                );
 
+    if ($title AND $album AND $artist AND $trackUrl) {
+        $jsonAnswer = initDownload($title, $artist, $album, $trackUrl, $coverUrl, $options);
+    }
 
-
-##### BODY #############################
-########################################
     echo formatJsonAnswer($jsonAnswer);
     exit;
 
@@ -363,29 +137,5 @@ HEREDOC;
 
 
 
-
-
-
-/*
-::test request::
-url: c12913664.web.cddbp.net
-reuest: 
-POST /webapi/xml/1.0/ HTTP/1.1
-Host: c12913664.web.cddbp.net
-Content-Length: 388
-
-<QUERIES>
-    <LANG>eng</LANG>
-    <AUTH>
-        <CLIENT></CLIENT>
-        <USER></USER>
-    </AUTH>
-    <QUERY CMD="ALBUM_SEARCH">
-        <TEXT TYPE="ARTIST">flying lotus</TEXT>
-        <TEXT TYPE="ALBUM_TITLE">until the quiet comes</TEXT>
-        <TEXT TYPE="TRACK_TITLE">all in</TEXT>
-    </QUERY>
-</QUERIES>
-*/
 
 ?>

@@ -778,4 +778,6 @@ function image_resize ($path, $path_new = null, $x = null, $y = null, $name_dem 
 		imagedestroy($img);
 		return $path;
 }
-?>
+
+
+

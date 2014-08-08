@@ -1,5 +1,246 @@
 <?php
 
+
+
+########## DOWNLOAD FUNCTION
+    function initDownload($title, $artist, $album, $trackUrl, $coverUrl = null, $options = null) {
+
+        /**/ ### PREPARING VARIABLES
+            $song_name   = fix_name($title);
+            $song_art    = fix_name($artist);
+            $song_alb    = fix_name($album);
+            $cover_name  = $song_alb;
+
+            $song_folder = $song_art . DIR_DELIM . $song_alb;
+
+            $lyrics_path = DOWNLOAD_FOLDER . DIR_DELIM . $song_folder . DIR_DELIM . 'lyrics' . DIR_DELIM . $song_name . '.txt';
+            $song_path   = DOWNLOAD_FOLDER . DIR_DELIM . $song_folder . DIR_DELIM . $song_name . '.' . IN_TRACK_EXT;
+            $cover_path  = DOWNLOAD_FOLDER . DIR_DELIM . $song_folder . DIR_DELIM . $cover_name . '.' . IN_COVER_EXT;
+
+            $song_path_conv  = substr_replace($song_path, OUT_TRACK_EXT, strrpos($song_path, IN_TRACK_EXT));
+            $cover_path_conv = substr_replace($cover_path, OUT_COVER_EXT, strrpos($cover_path, IN_COVER_EXT));
+
+            $station_id   = $options['stationId'];
+            $station_name = $options['stationName'];
+            /**/
+
+
+
+        /**/ ### CHECKING DIRS
+            // if download folder does not exist - then create
+            if (!is_dir(DOWNLOAD_FOLDER))
+                mkdir(DOWNLOAD_FOLDER, 755);
+
+            if (!is_dir(DOWNLOAD_FOLDER . DIR_DELIM . $song_folder))
+                mkdir(DOWNLOAD_FOLDER . DIR_DELIM . $song_folder, 755, true);
+            /**/
+
+
+
+        /**/ ### DOWNLOADING TRACK AND COVER FILES
+            if(file_exists($song_path_conv) == false) {
+                $jsonAnswer->song['code'] = download_curl($trackUrl, $song_path);
+            } else {
+                $jsonAnswer->song['code'] = 'exist';
+            }
+
+            if($coverUrl AND file_exists($cover_path_conv) == false) {
+                $jsonAnswer->cover['code'] = download_curl($coverUrl, $cover_path);
+            } elseif ($coverUrl AND file_exists($cover_path_conv) == true) {
+                $jsonAnswer->cover['code'] = 'exist';
+            } else { 
+                $jsonAnswer->cover['code'] = 'canceled';
+            }
+            /**/
+
+
+
+        /**/ ### CONVERTING TRACK/COVER AND CLEARING THE PATH
+            if ($jsonAnswer->cover['code'] == 200 AND IN_COVER_EXT != OUT_COVER_EXT) {
+                $flag['cover_conv'] = convert_cover($cover_path, $cover_path_conv);
+            }
+
+            if ($jsonAnswer->song['code'] == 200 AND IN_TRACK_EXT != OUT_TRACK_EXT) {
+                $flag['track_conv'] = convert_track($song_path, $song_path_conv);
+            }
+
+            if (is_file($cover_path_conv) == false) {
+                $cover_path_conv = null;
+            }
+
+            if (is_file($song_path_conv) == false) {
+                $song_path_conv = null;
+            }
+            /**/
+
+
+
+        /**/ ### PARSING TAGS
+            if ($jsonAnswer->song['code'] == 200) {
+
+                // Parsing tags
+                if (PARSE_TAGS) {
+                    $meta = update_meta(null, array(
+                        'title'  => $title,
+                        'artist' => $artist,
+                        'album'  => $album
+                    ));
+
+                    if (PARSE_TAGS == 'remote') {
+                        $parseOptions     = getParseOptions($artist, $title, $album);
+
+                        $meta_short       = parse_metadata_gracenote($artist, $title, $album, 'short', $parseOptions['option']);
+                        $meta_long        = parse_metadata_gracenote($artist, $title, $album, 'long', $parseOptions['option']);
+                        $correlationIndex = $parseOptions['correlation'];
+
+                        if (
+                            $correlationIndex >= CORRELATION
+                            AND !stristr($meta_short['genre'], 'Soundtrack')
+                            AND !stristr($meta_short['genre'], 'Original Film/TV Music')
+                        ) {
+                            $meta = update_meta($meta, array(
+                                'genre'   => $meta_short['genre'], 
+                                'date'    => $meta_short['date'],
+                                'track'   => $meta_short['track'],
+                                'comment' => $meta_long['comment'] . '[StationID] => ' . $station_id.'; '
+                            ));
+                        }
+                    }
+                }
+
+                // updating tags
+                if ( $flag['track_conv']) {
+                    update_tags($song_path_conv, $meta[OUT_TRACK_EXT]);
+                } else {
+                    update_tags($song_path_conv, $meta[IN_TRACK_EXT]);
+                }
+
+                // embedding cover art 
+                if (EMBED_COVERART == true AND ($jsonAnswer->cover['code'] == 200 OR $jsonAnswer->cover['code'] == 'exist') AND $cover_path_conv) {
+                    embed_cover($song_path_conv, $cover_path_conv);
+                }
+
+                // downloading lyrics
+                if (PARSE_LYRICS) {
+                    $jsonArrLyrics = array(
+                        'artist' => $artist,
+                        'song'   => $title,
+                        'album'  => $album
+                    );
+                    list($lyrics) = parse_lyrics($artist, $title, false, $jsonArrLyrics);
+
+                    if (!$lyrics) {
+                        $lyrics = $lyrics_tmp;
+                    }
+
+                    if ($lyrics) {
+                        if (!is_dir(dirname($lyrics_path)))
+                            mkdir(dirname($lyrics_path), 0755, true);
+                        if (IS_DOWNLOAD) {
+                            file_put_contents($lyrics_path, $lyrics);
+                        }       
+                    }
+                }
+
+                // embedding lyrics
+                if (EMBED_LYRICS == true AND is_file($lyrics_path)) {
+                    embed_lyrics($song_path_conv, $lyrics_path);
+                }
+            }
+            
+            $jsonAnswer->error["code"] = 0;
+            /**/
+
+
+
+        /**/ ### PLAYLISTS
+            if (PARSE_PLAYLISTS AND ($jsonAnswer->song['code'] === 200  OR $jsonAnswer->song['code'] === 'exist') 
+                // AND $options['actionElement'] == 'like'
+            ) {
+                // checking station's folders
+                if (!is_dir('stations')) {
+                    mkdir('stations', 0755);
+                }
+                
+                if (!is_dir('stations/backup')) {
+                    mkdir('stations/backup', 0755);
+                }
+
+                // creating relative song path for the playlist
+                if ($flag['track_conv'] === false) {
+                    $station_song_path = $song_folder . DIR_DELIM . $song_name . '.' . IN_TRACK_EXT;
+                } else {
+                    $station_song_path = $song_folder . DIR_DELIM . $song_name . '.' . OUT_TRACK_EXT;
+                }
+
+                // STATION'S PLAYLISTS
+                    if ( isset($station_id) AND station_checkPath($station_id, $station_song_path) == false ) {
+                        // backup system station file 
+                        station_backup($station_id);
+
+                        // update station playlist in system folder
+                        station_update($station_id, $station_song_path);
+
+                        // selecting all station playlists in pandora download folder
+                        $dir = scandir(DOWNLOAD_FOLDER);
+                        foreach ($dir AS $file) {
+                            if (stristr($file, '.m3u')) {
+                                $stations[] = $file;
+                            }
+                        }
+
+                        // searching for the station with the same station-id
+                        if ($stations) {
+                            foreach ($stations AS $station) {
+                                if ($station_id == station_get_id(DOWNLOAD_FOLDER . DIR_DELIM . $station)) {
+                                    unlink(DOWNLOAD_FOLDER . DIR_DELIM . $station);
+                                }
+                            }
+                        }
+
+                        // replacing station's playlist
+                        copy('stations/'.$station_id, DOWNLOAD_FOLDER . DIR_DELIM . trim($station_name) . '.m3u');
+                    }
+
+
+                // GENRE, MOOD, TEMPO PLAYLISTS
+                    if (!$meta_long) {
+                        $parseOptions = getParseOptions($artist, $title, $album);
+
+                        $meta_long  = parse_metadata_gracenote($artist, $title, $album, 'long', $parseOptions['option']);
+                        $correlationIndex = $parseOptions['correlation'];
+                    }
+
+                    if ($correlationIndex >= CORRELATION) {
+                        // Genre
+                        if (PARSE_PLAYLISTS_GENRE) {
+                            $playlistNames = getPlaylistNames($meta_long['TR_GENRE'], '[G] ');
+                            makePlaylists($playlistNames, $station_song_path, PLAYLISTS_GENRE_PATH);
+                        }
+                        
+                        // Mood
+                        if (PARSE_PLAYLISTS_MOOD) {
+                            $playlistNames = getPlaylistNames($meta_long['TR_MOOD'], '[M] ');
+                            makePlaylists($playlistNames, $station_song_path, PLAYLISTS_MOOD_PATH);
+                        }
+                        
+                        // Tempo
+                        if (PARSE_PLAYLISTS_TEMPO) {
+                            $playlistNames = getPlaylistNames($meta_long['TR_TEMPO'], '[T] ');
+                            makePlaylists($playlistNames, $station_song_path, PLAYLISTS_TEMPO_PATH);
+                        }
+                    }
+
+
+            }
+            /**/
+
+
+        return $jsonAnswer;
+    }
+
+
+
 ########## NAMES, FILTERS, JSON
     function fix_name($name) {
         $name = str_replace('->', '_', $name);
@@ -617,319 +858,3 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-##############################
-##### DEPRECATED #############
-##############################
-    /** /
-    function parse_metadata($song_art, $song_name) {
-        $song_art = prepare_for_url($song_art);
-        $song_name = prepare_for_url($song_name);
-        if (strstr($song_name, '('))
-            $song_name = substr_replace($song_name, null, strpos($song_name, '('));
-
-        $track_url = 'http://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key='.LASTFM_KEY.'&autocorrect=1&artist='.$song_art.'&track='.$song_name;
-        $track_xml = simplexml_load_file($track_url);
-
-        if ($track_xml->attributes()->status == 'ok') {
-            @$meta['title']     = (string)$track_xml->track->name;
-            @$meta['artist']    = (string)$track_xml->track->artist->name;
-            @$meta['album']     = (string)$track_xml->track->album->title;
-            @$meta['track']     = (string)$track_xml->track->album->attributes()->position;
-            @$meta['genre']     = (string)$track_xml->track->toptags->tag[0]->name;
-            $nodes['alb_mbid']  = (string)$track_xml->track->album->mbid;
-
-            if ($nodes['alb_mbid']) {
-                $alb_url        = 'http://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key='.LASTFM_KEY.'&mbid='.$nodes['alb_mbid'];
-                $alb_xml        = simplexml_load_file($alb_url);
-            }
-        }
-
-        if ($alb_xml AND $alb_xml->attributes()->status == 'ok') {
-            $meta['date']       = preg_replace("~.*([0-9]{4}).*~", "$1", (string)$alb_xml->album->releasedate);
-        }
-
-        // $meta = get_meta($meta);
-
-        return $meta;
-    }
-    /**/
-
-    /** /
-    function parse_metadata_by_link($artist, $song, $album) {
-        $link = get_lyrics_link($artist, $song);
-
-        $album = strtolower($album);
-        $album = preg_replace("~ [[:space:]] *~", ' ', $album);
-        $album = preg_replace("~[^A-z\s]~", '', $album);
-
-        if ($link) {
-            $data = file_get_contents($link);
-
-            // IDv3
-            $metadata = substr_replace($data, null, 0, stripos($data, 'Song details</TH>'));
-            $metadata = substr_replace($metadata, null, 0, stripos($metadata, '</TR>') + 5);
-            $metadata = substr_replace($metadata, null, stripos($metadata, '</TABLE>'));
-            $metadata = trim($metadata);
-            $metadata = explode('</TR>', $metadata);
-            foreach ($metadata AS $tr) {
-                $tr = explode("</TD>", trim($tr));
-
-                if (trim(strip_tags($tr[0])) == 'Title')
-                    $meta['Title'] = trim(strip_tags($tr[1]));
-
-                if (trim(strip_tags($tr[0])) == 'Artist')
-                    $meta['Artist'] = trim(strip_tags($tr[1]));
-
-                if (trim(strip_tags($tr[0])) == 'Album') {
-                    $tr[1] = str_replace('<BR>', '$RAPLACER$', $tr[1]);
-                    $meta['Album_tmp'] = strip_tags($tr[1]);
-                    $meta['Album_tmp'] = preg_replace("~\s+~", ' ', $meta['Album_tmp']);
-                    $meta['Album_tmp'] = explode('$RAPLACER$', $meta['Album_tmp']);
-
-                    foreach ($meta['Album_tmp'] as $key => $Album_tmp) {
-                        $Album_tmp = strtolower($Album_tmp);
-                        $Album_tmp = preg_replace("~ [[:space:]] *~", ' ', $Album_tmp);
-                        $Album_tmp = preg_replace("~[^A-z\s]~", '', $Album_tmp);
-                        if (strstr($Album_tmp, $album) OR strstr($album, $Album_tmp)) {
-                            $meta['Album_last'] = $meta['Album_tmp'][$key];
-                            break;
-                        }
-                    }
-                    if (!$meta['Album_last'])
-                        $meta['Album_last'] = $meta['Album_tmp'][count( $meta['Album_tmp']) - 1];
-
-                    $meta['Album'] = substr_replace($meta['Album_last'], null, strpos($meta['Album_last'], '['));
-                    
-                    $meta['Year'] = substr_replace($meta['Album_last'], null, 0, strpos($meta['Album_last'] , '[') + 1);
-                    $meta['Year'] = substr_replace($meta['Year'], null, strpos($meta['Year'] , ']'));
-                    $meta['TrackNo'] = trim(substr_replace($meta['Album_last'], null, 0, stripos($meta['Album_last'] , 'Track') + strlen('Track') ));
-                    // $meta['Album'] = strip_tags($meta['Album']);
-                }
-
-                if (trim(strip_tags($tr[0])) == 'Genre')
-                    $meta['Genre'] = trim(strip_tags($tr[1]));
-            }
-
-            // Song lyrics
-            $lyrics = substr_replace($data, null, 0, stripos($data, 'Song lyrics</TH>'));
-            // $lyrics = substr_replace($lyrics, null, 0, stripos($lyrics, '</TR>') + 5);
-            $lyrics = substr_replace($lyrics, null, 0, stripos($lyrics, '</DIV>') + 6);
-            $lyrics = substr_replace($lyrics, null, stripos($lyrics, '</TABLE>'));
-            $lyrics = substr_replace($lyrics, null, stripos($lyrics, 'song_lyrics_credits>') + strlen('song_lyrics_credits>'));
-            $lyrics = str_replace("\r", "", $lyrics);
-            $lyrics = str_replace("\n", "", $lyrics);
-            $lyrics = str_replace("<BR>", "\r\n", $lyrics);
-            $lyrics = trim(strip_tags($lyrics));
-            if (stristr($lyrics, 'This artist does not want'))
-                $lyrics = null;
-            // if ($lyrics)
-                // $meta['Lyrics'] = $lyrics;
-
-            // $meta = get_meta($meta);
-        }
-
-        return array($meta, $lyrics);
-    }
-    /**/
-
-
-    /** /
-    function get_meta($meta) {
-        $meta = update_meta(null,   array(
-            'album' => trim($meta['Album']), 
-            'artist' => trim($meta['Artist']), 
-            'genre' => trim($meta['Genre']), 
-            'title' => trim($meta['Title']), 
-            'track' => trim($meta['TrackNo']), 
-            'date' => trim($meta['Year']) 
-        ));
-
-        return $meta;
-    }
-
-    function get_meta_comment() {
-
-    };
-    /**/
-
-
-//  function get_lyrics_link($song_art, $song_name) {
-//      global $debug;
-//      // $song_art = 'The Offspring';
-//      // $song_name = 'Dirty Magic';
-//      // $song_art = 'Edward Sharpe & The Magnetic Zeros';
-//      // $song_name = 'Home';
-//
-//      if ($song_art AND $song_name) {
-//          $song_art = str_replace("'", "\'", $song_art);
-//          $song_name = str_replace("'", "\'", $song_name);
-//          if (strstr($song_name, '('))
-//          $song_name = substr_replace($song_name, null, strpos($song_name, '('));
-//
-//          // delete unusefull info
-//          $song_name = str_replace('Single Version', null, $song_name);
-//
-//          $search_host = 'https://www.google.ru/';
-//          $search_query = 'search?q=site:letssingit.com '.$song_art.' - '.$song_name.'';
-//          $search_url = str_replace('&', '%26', $search_host.$search_query);
-//          $search_url = str_replace('+', '%2B', $search_url);
-//          $search_url = str_replace(' ', '+', $search_url);
-//
-//          ##### Geting cookies
-//              # $search_query = null;
-//              # $ch = curl_init($search_host);
-//              # curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-//              # curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-//              # curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-//
-//              # curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // for SSL work
-//              # curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // for SSL work
-//              # 
-//              # curl_setopt($ch,CURLOPT_HEADER,true);
-//              # curl_setopt($ch,CURLOPT_NOBODY,true);
-//
-//              # $data = curl_exec($ch);
-//              # $data = explode("\r\n", $data);
-//              # $cookies = null;
-//              # foreach ($data AS $val) {
-//              #   if (strstr($val, 'Set-Cookie:')) {
-//              #       if ($cookies)
-//              #           $cookies .= '; ';
-//              #       $cookies .= trim(str_replace('Set-Cookie: ', null, $val));
-//              #   }
-//              # }
-//              # // echo($cookies);
-//              # curl_close($ch);
-//
-//          ##### parsing http://artists.letssingit.com link from google
-//              $ch = curl_init($search_url);
-//              curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-//              curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-//              curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-//
-//              curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // for SSL work
-//              curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // for SSL work
-//              // curl_setopt($ch,CURLINFO_HEADER_OUT,true);
-//
-//              $headers = array(
-//                  'User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:19.0) Gecko/20100101 Firefox/19.0',
-//                  'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
-//                  'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-//                  'Accept-Language: ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
-//                  'Accept-Encoding: deflate',
-//                  // 'Cookie: '.$cookie.'',
-//                  'Connection: keep-alive'
-//              ); 
-//
-//              $link = null;
-//              $data = curl_exec($ch);
-//
-//              // echo($data);
-//
-//              ########################################
-//              ########## WORD PROCESSOR - полнещая каша, сам хер когда разберусь = )
-//                  $data = substr_replace($data, null, 0, strpos($data, '<ol>') + strlen('<ol>'));
-//                  $data = substr_replace($data, null, strpos($data, '</ol>'));
-//                  $data = explode('<li class="g">', $data);
-//                  foreach ($data AS $key => $val) {
-//                      $val = substr_replace($val, null, 0, strpos($val, '<h3 class="r">'));
-//                      
-//                      $data_src[$key] = substr_replace($val, null, 0, strpos($val, 'http://artists.letssingit.com'));
-//                      $data_src[$key] = substr_replace($data_src[$key], null, strpos($data_src[$key], '"'));
-//                      if (strstr($data_src[$key], '&'))
-//                          $data_src[$key] = substr_replace($data_src[$key], null, strpos($data_src[$key], '&'));
-//
-//                      $val = substr_replace($val, null, strpos($val, '</h3>'));
-//                      $val = strip_tags($val);
-//                      $val = preg_replace("~[^\w-]~", ' ', $val);
-//                      $val = preg_replace("~[\s]+~", ' ', $val);
-//                      if (!$val OR !strstr($val, '-')) {
-//                          unset($data[$key]);
-//                          unset($data_src[$key]);
-//                      } else {
-//                          $data[$key] = strtolower(' '.$val.' ');
-//                      }
-//                  }
-//
-//                  $song_name_arr = preg_replace("~[^\w-]~", ' ', $song_name);
-//                  $song_name_arr = preg_replace("~[\s]+~", ' ', $song_name_arr);
-//                  $song_name_arr = str_replace('&', 'amp', $song_name_arr);
-//
-//                  // Оцениваем релевантнасть по 3м вхождениям
-//                  foreach ($data as $key => $value) {
-//                      // $data_count[$key] += substr_count_array($value, $song_name_arr);
-//                      $data_count[$key] += substr_count($value, strtolower('- '.$song_name_arr.' lyrics') );
-//                      $data_count[$key] += substr_count($value, strtolower($song_name_arr.' lyrics') );
-//                      $data_count[$key] += substr_count($value, strtolower($song_name_arr) );
-//                  }
-//
-//                  foreach ($data_src as $key => $value) {
-//                      if (!$link) {
-//                          $link = $value;
-//                          $link_key = $key;
-//                      }
-//                      
-//                      if (!$max_count)
-//                          $max_count = $data_count[$key];
-//
-//                      if ($data_count[$key] > $max_count) {
-//                          $link = $value;
-//                          $max_count = $data_count[$key];         
-//                          $link_key = $key;
-//                      }
-//                  }
-//
-//                  /**/
-//                  if ($debug) {
-//                      echo('<pre>');
-//                      print_r ($data);
-//                      print_r ($data_count);
-//                      print_r ($data_src);
-//                      die();
-//                  }
-//                  /**/
-//                  if (LOG) {
-//                      if (strstr(LOG, '/') AND !is_dir(dirname(LOG)))
-//                          mkdir(dirname(LOG), 0755, true);
-//
-//                      $log .= '##### '.$song_art.' - '.$song_name."\r\n";
-//                      $log .= $link."\r\n";
-//                      $log .= serialize(array('#'.$link_key.'#'.$max_count, date("Y-m-d H:i:s"), $data, $data_count, $data_src))."\r\n";
-//                      error_log($log, 3, LOG);
-//                  }
-//              ##########
-//              ########################################
-//
-//              # if (strstr($data, 'artists.letssingit.com')) {
-//              #   $link = substr_replace($data, null, 0, strpos($data, 'http://artists.letssingit.com'));
-//              #   $link = substr_replace($link, null, strpos($link, '"'));
-//              #   if (strstr($link, '&'))
-//              #       $link = substr_replace($link, null, strpos($link, '&'));
-//              # }
-//
-//          if (strstr($link, 'artists.letssingit.com'))
-//              return $link;
-//      }
-//
-//      return false;
-//  }
-?>
