@@ -303,6 +303,28 @@
 
 
 ########## UPDATE METADATA, TAGS, CONSTRUCT SHELL
+    /** /
+    // Experemental ::
+    function enrichMetadataArray($meta, $metaNew, $replace = true)
+    {
+        if ($metaNew) {
+            foreach ($metaNew as $tagName => $tagValue) {
+                if ($replace == true OR ($replace == false AND $meta[$tagName] == null) ) {
+                    $tagValue = trim($tagValue);
+                    if (!$tagValue) {
+                        continue;
+                    }
+
+                    $meta[$tagName] = $tagValue;
+                }
+            }
+        }
+
+        return $meta;
+    }
+    /**/
+
+
     function update_meta($meta = null, $update = null) {
         if ($update) {
             foreach ($update as $tag => $value) {
@@ -608,8 +630,10 @@
             $lyrics_page_url = str_replace('?', '%3F', $lyrics_page_url);
         }
 
-        if ($lyrics_page_url)
+        if ($lyrics_page_url) {
             $lyrics = file_get_contents($lyrics_page_url);
+        }
+
 
         if ($lyrics) {
             // TODO: make parsing when links are displayed instead of lyrics
@@ -619,9 +643,12 @@
 
             $lyrics = substr_replace($lyrics, null, 0, strpos($lyrics, "<div class='lyricbox'>"));
             $lyrics = substr_replace($lyrics, null, 0, strpos($lyrics, '&#'));
-            $lyrics = substr_replace($lyrics, null, strpos($lyrics, "<div class='rtMatcher'>"));
-            if (strstr($lyrics, '<!--'))
+            if (strstr($lyrics, "<div class='rtMatcher'>")) {
+                $lyrics = substr_replace($lyrics, null, strpos($lyrics, "<div class='rtMatcher'>"));
+            }
+            if (strstr($lyrics, '<!--')) {
                 $lyrics = substr_replace($lyrics, null, strpos($lyrics, '<!--'));
+            }
 
             $lyrics = html_entity_decode($lyrics);
             $lyrics = str_replace("<br />", "\r\n", $lyrics);

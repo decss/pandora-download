@@ -25,6 +25,10 @@ $filePath = 'test/song - ' . date('H:i:s') . '.m4a';
 $filePath = realpath('test/song.m4a');
 
 
+// $jsonArr['song']      = 'Center Of The Sun';
+// $jsonArr['album']     = 'Chillout 04: The Ultimate Chillout';
+// $jsonArr['artist']    = 'Conjure One';
+
 
 echo '<pre>';
 echo '<div style="font-size:11px;">';
@@ -50,7 +54,7 @@ $options    = getParseOptions($jsonArr['artist'], $jsonArr['song'], $jsonArr['al
 print_r($options);
 
 
-/**/
+/** /
 echo '<h2>META SHORT</h2>';
 $meta_short = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $jsonArr['album'], 'short', $options['option']);
 print_r($meta_short);
@@ -62,7 +66,7 @@ $meta_long  = parse_metadata_gracenote($jsonArr['artist'], $jsonArr['song'], $js
 print_r($meta_long);
 
 
-/** /
+/**/
 echo '<h2>LYRICS</h2>';
 list($lyrics) = parse_lyrics($jsonArr['artist'], $jsonArr['song'], false, $jsonArr);
 print_r($lyrics);
@@ -75,7 +79,7 @@ download_curl($jsonArr['url_track'], $filePath);
 echo 'file after: ' . is_file($filePath) . '<br />';
 
 
-/**/
+/** /
 echo '<h2>META GENERATE</h2>';
 $meta = update_meta($meta, array(
             'artist'  => $meta_short['artist'],
@@ -89,7 +93,7 @@ $meta = update_meta($meta, array(
 print_r($meta);
 
 
-/**/
+/** /
 echo '<h2>UPDATING TAGS</h2>';
 // update_tags($filePath, array('title' => 'title - ' . date("H:i:s")));
 update_tags($filePath, $meta['m4a']);
@@ -211,11 +215,10 @@ exit;
 
 /*
 ::test request::
-url: c12913664.web.cddbp.net
+c5020672.web.cddbp.net
 reuest: 
 POST /webapi/xml/1.0/ HTTP/1.1
-Host: c12913664.web.cddbp.net
-Content-Length: 388
+Host: c5020672.web.cddbp.net
 
 <QUERIES>
     <LANG>eng</LANG>
